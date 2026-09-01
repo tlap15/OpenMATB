@@ -1,5 +1,7 @@
 """Tests for core.logreader - CSV session parsing logic."""
 
+from pathlib import Path
+
 from core.logreader import IGNORE_PLUGINS, LogReader
 
 
@@ -23,6 +25,18 @@ def _make_logreader(**overrides):
     lr._bp_scenario_times = [0.0]
     lr.__dict__.update(overrides)
     return lr
+
+
+# ── __init__ filename parsing ────────────────────
+
+
+class TestInit:
+    def test_session_path_parses_new_sid_filename(self):
+        from unittest.mock import patch
+
+        with patch.object(LogReader, "reload_session"), patch("core.logreader.get_session_id_from_csv", return_value=6):
+            lr = LogReader(session_path=str(Path("sessions/p19_train_resman_260901_082426.csv")))
+        assert lr.replay_session_id == 6
 
 
 # ── session_event_to_str ─────────────────────────

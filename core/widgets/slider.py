@@ -7,7 +7,7 @@ from __future__ import annotations
 import math
 from typing import Any, Callable
 
-from pyglet.gl import GL_BLEND, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, glBlendFunc, glEnable, glLineWidth
+from pyglet.gl import GL_BLEND, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, glBlendFunc, glEnable
 from pyglet.text import Label
 
 from core.constants import COLORS as C
@@ -16,6 +16,7 @@ from core.constants import Group as G
 from core.container import Container
 from core.rendering import line_loop_to_lines
 from core.widgets import AbstractWidget
+from core.widgets.abstractwidget import set_line_width_safely
 from core.window import Window
 
 
@@ -55,7 +56,7 @@ class Slider(AbstractWidget):
 
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glEnable(GL_BLEND)
-        glLineWidth(3)
+        set_line_width_safely(3)
 
         self.containers: dict[str, Container] = dict()
         self.set_sub_containers()

@@ -20,6 +20,7 @@ from core.constants import FONT_SIZES as F
 from core.constants import PATHS as P
 from core.constants import Group as G
 from core.rendering import get_group, get_program, polygon_indices
+from core.utils import get_session_id_from_csv, get_session_id_from_filename
 
 
 class FileSelector:
@@ -87,20 +88,19 @@ class FileSelector:
 
     @staticmethod
     def _session_sort_key(path: Path) -> int:
-        try:
-            return int(path.stem.split("_")[0])
-        except (ValueError, IndexError):
-            return 0
+        session_id: int | None = get_session_id_from_filename(path.name) or get_session_id_from_csv(path)
+        return session_id if session_id is not None else 0
 
     def _format_entry(self, filepath: Path) -> str:
         if self.mode == "scenario":
             return str(filepath.relative_to(P["SCENARIOS"]).with_suffix(""))
-        # Replay: parse {ID}_{YYMMDD}_{HHMMSS}.csv
+        # Replay: support legacy ID-prefixed files and newer participant/scenario/timestamp files.
         parts: list[str] = filepath.stem.split("_")
-        if len(parts) >= 3:
+        session_id: int | None = get_session_id_from_filename(filepath.name) or get_session_id_from_csv(filepath)
+        if session_id is not None and len(parts) >= 2:
             try:
-                dt: datetime = datetime.strptime(parts[1] + parts[2], "%y%m%d%H%M%S")
-                return f"#{parts[0]} \u2014 {dt.strftime('%Y-%m-%d %H:%M:%S')}"
+                dt: datetime = datetime.strptime(parts[-2] + parts[-1], "%y%m%d%H%M%S")
+                return f"#{session_id} \u2014 {dt.strftime('%Y-%m-%d %H:%M:%S')}"
             except ValueError:
                 pass
         return filepath.stem

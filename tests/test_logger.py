@@ -2,6 +2,8 @@
 
 import importlib
 from collections import namedtuple
+from datetime import datetime
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from core.event import Event
@@ -26,6 +28,36 @@ def _make_logger(**overrides):
     lg.writer = MagicMock()
     lg.__dict__.update(overrides)
     return lg
+
+
+# ── filename metadata helpers ────────────────────
+
+
+class TestFilenameHelpers:
+    def test_sanitize_filename_part_preserves_safe_characters(self):
+        assert _logger_module._sanitize_filename_part("P-01_alpha") == "P-01_alpha"
+
+    def test_sanitize_filename_part_replaces_unsafe_characters(self):
+        assert _logger_module._sanitize_filename_part("P 01 / baseline") == "P_01___baseline"
+
+    def test_sanitize_filename_part_uses_default_for_empty(self):
+        assert _logger_module._sanitize_filename_part("   ", default="fallback") == "fallback"
+
+
+class TestLoggerInitFilename:
+    @patch.object(_logger_module.Logger, "log_manual_entry")
+    @patch.object(_logger_module.Logger, "open")
+    @patch.object(_logger_module, "find_the_first_available_session_number", return_value=12)
+    @patch.object(_logger_module, "REPLAY_MODE", False)
+    @patch.object(_logger_module, "PATHS", {"SESSIONS": Path("sessions")})
+    @patch.object(_logger_module, "datetime")
+    def test_includes_participant_and_scenario_in_filename(self, mock_datetime, _mock_session, _mock_open, _mock_log_manual_entry):
+        fixed_now = datetime(2026, 9, 1, 14, 5, 6)
+        mock_datetime.now.return_value = fixed_now
+        logger = Logger(participant_id="P 01", scenario_path=Path("includes/scenarios/my scenario.txt"))
+        assert logger.participant_id == "P_01"
+        assert logger.scenario_name == "my_scenario"
+        assert logger.path == Path("sessions/2026-09-01/P_01_my_scenario_260901_140506.csv")
 
 
 # ── round_row ────────────────────────────────────
@@ -111,8 +143,19 @@ class TestSetters:
 # ── record_event ─────────────────────────────────
 
 
+class TestNowLogtime:
+    def test_returns_utc_timestamp(self):
+        """_now_logtime returns a POSIX timestamp in UTC."""
+        from datetime import datetime, timezone
+
+        result = _logger_module._now_logtime()
+        expected = datetime.now(timezone.utc).timestamp()
+        assert isinstance(result, float)
+        assert abs(result - expected) < 1
+
+
 class TestRecordEvent:
-    @patch.object(_logger_module, "perf_counter", return_value=1.0)
+    @patch.object(_logger_module, "_now_logtime", return_value=1.0)
     def test_single_command_uses_self_address(self, _mock_pc):
         """Single-command event uses address='self'."""
         lg = _make_logger(scenario_time=10)
@@ -125,7 +168,7 @@ class TestRecordEvent:
         assert args[4] == "self"
         assert args[5] == "start"
 
-    @patch.object(_logger_module, "perf_counter", return_value=1.0)
+    @patch.object(_logger_module, "_now_logtime", return_value=1.0)
     def test_two_command_uses_address_value(self, _mock_pc):
         """Two-command event uses command[0] as address, command[1] as value."""
         lg = _make_logger(scenario_time=10)
@@ -136,7 +179,7 @@ class TestRecordEvent:
         assert args[4] == "pump-1-state"
         assert args[5] == "on"
 
-    @patch.object(_logger_module, "perf_counter", return_value=1.0)
+    @patch.object(_logger_module, "_now_logtime", return_value=1.0)
     def test_uses_current_scenario_time(self, _mock_pc):
         """Slot uses the logger's current scenario_time."""
         lg = _make_logger(scenario_time=99.5)
@@ -151,7 +194,7 @@ class TestRecordEvent:
 
 
 class TestRecordInput:
-    @patch.object(_logger_module, "perf_counter", return_value=2.0)
+    @patch.object(_logger_module, "_now_logtime", return_value=2.0)
     def test_formats_input_slot(self, _mock_pc):
         """Builds slot with type='input', module, key, state."""
         lg = _make_logger(scenario_time=5)
@@ -165,7 +208,7 @@ class TestRecordInput:
 
 
 class TestRecordAoi:
-    @patch.object(_logger_module, "perf_counter", return_value=3.0)
+    @patch.object(_logger_module, "_now_logtime", return_value=3.0)
     def test_parses_plugin_and_widget(self, _mock_pc):
         """Splits 'plugin_widget' name into plugin and widget parts."""
         lg = _make_logger(scenario_time=0)
@@ -179,7 +222,7 @@ class TestRecordAoi:
         assert args[4] == "scale1"
         assert args[5] == (10, 70, 110, 20)
 
-    @patch.object(_logger_module, "perf_counter", return_value=3.0)
+    @patch.object(_logger_module, "_now_logtime", return_value=3.0)
     def test_multi_underscore_widget_name(self, _mock_pc):
         """Widget name with multiple underscores keeps all parts after first."""
         lg = _make_logger(scenario_time=0)
@@ -196,7 +239,7 @@ class TestRecordAoi:
 
 
 class TestRecordState:
-    @patch.object(_logger_module, "perf_counter", return_value=4.0)
+    @patch.object(_logger_module, "_now_logtime", return_value=4.0)
     def test_parses_graph_name(self, _mock_pc):
         """Splits graph_name into module and widget, builds address."""
         lg = _make_logger(scenario_time=0)
@@ -208,7 +251,7 @@ class TestRecordState:
         assert args[4] == "light1, color"
         assert args[5] == "(255,0,0)"
 
-    @patch.object(_logger_module, "perf_counter", return_value=4.0)
+    @patch.object(_logger_module, "_now_logtime", return_value=4.0)
     def test_multi_underscore_graph_name(self, _mock_pc):
         """Graph name with multiple underscores preserves widget parts."""
         lg = _make_logger(scenario_time=0)
@@ -223,7 +266,7 @@ class TestRecordState:
 
 
 class TestRecordParameter:
-    @patch.object(_logger_module, "perf_counter", return_value=5.0)
+    @patch.object(_logger_module, "_now_logtime", return_value=5.0)
     def test_formats_parameter_slot(self, _mock_pc):
         """Builds slot with type='parameter'."""
         lg = _make_logger(scenario_time=10)
@@ -237,7 +280,7 @@ class TestRecordParameter:
 
 
 class TestLogPerformance:
-    @patch.object(_logger_module, "perf_counter", return_value=6.0)
+    @patch.object(_logger_module, "_now_logtime", return_value=6.0)
     def test_formats_performance_slot(self, _mock_pc):
         """Builds slot with type='performance'."""
         lg = _make_logger(scenario_time=20)
@@ -251,7 +294,7 @@ class TestLogPerformance:
 
 
 class TestRecordPseudorandomValue:
-    @patch.object(_logger_module, "perf_counter", return_value=7.0)
+    @patch.object(_logger_module, "_now_logtime", side_effect=[7.0, 8.0])
     def test_writes_two_slots(self, _mock_pc):
         """Writes both seed_value and seed_output slots."""
         lg = _make_logger(scenario_time=0)
@@ -259,7 +302,7 @@ class TestRecordPseudorandomValue:
         lg.record_a_pseudorandom_value("communications", 42, "result")
         assert lg.write_single_slot.call_count == 2
 
-    @patch.object(_logger_module, "perf_counter", return_value=7.0)
+    @patch.object(_logger_module, "_now_logtime", side_effect=[7.0, 8.0])
     def test_seed_value_slot(self, _mock_pc):
         """First slot has type='seed_value' with the seed."""
         lg = _make_logger(scenario_time=0)
@@ -269,13 +312,14 @@ class TestRecordPseudorandomValue:
         assert first_args[2] == "seed_value"
         assert first_args[5] == 42
 
-    @patch.object(_logger_module, "perf_counter", return_value=7.0)
+    @patch.object(_logger_module, "_now_logtime", side_effect=[7.0, 8.0])
     def test_seed_output_slot(self, _mock_pc):
         """Second slot has type='seed_output' with the output."""
         lg = _make_logger(scenario_time=0)
         lg.write_single_slot = MagicMock()
         lg.record_a_pseudorandom_value("communications", 42, "result")
         second_args = lg.write_single_slot.call_args_list[1][0][0]
+        assert second_args[0] == 8.0
         assert second_args[2] == "seed_output"
         assert second_args[5] == "result"
 
@@ -284,7 +328,7 @@ class TestRecordPseudorandomValue:
 
 
 class TestLogManualEntry:
-    @patch.object(_logger_module, "perf_counter", return_value=8.0)
+    @patch.object(_logger_module, "_now_logtime", return_value=8.0)
     def test_default_key(self, _mock_pc):
         """Default type is 'manual'."""
         lg = _make_logger(scenario_time=0)
@@ -294,7 +338,7 @@ class TestLogManualEntry:
         assert args[2] == "manual"
         assert args[5] == "user note"
 
-    @patch.object(_logger_module, "perf_counter", return_value=8.0)
+    @patch.object(_logger_module, "_now_logtime", return_value=8.0)
     def test_custom_key(self, _mock_pc):
         """Custom key replaces 'manual' type."""
         lg = _make_logger(scenario_time=0)

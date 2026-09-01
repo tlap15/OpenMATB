@@ -5,7 +5,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from core.utils import clamp, find_the_first_available_session_number, get_session_numbers
+from pathlib import Path
+
+from core.utils import clamp, find_the_first_available_session_number, get_session_id_from_csv, get_session_id_from_filename, get_session_numbers
 
 
 class TestClamp:
@@ -36,24 +38,53 @@ class TestClamp:
         assert clamp(1.5, 0.0, 1.0) == 1.0
 
 
+class TestGetSessionIdFromFilename:
+    def test_parses_legacy_prefix_format(self):
+        assert get_session_id_from_filename("1_240101_120000.csv") == 1
+
+    def test_parses_new_sid_format(self):
+        assert get_session_id_from_filename("p19_train_resman_sid6_260901_082426.csv") == 6
+
+    def test_returns_none_when_missing(self):
+        assert get_session_id_from_filename("p19_train_resman_260901_082426.csv") is None
+
+
+class TestGetSessionIdFromCsv:
+    def test_reads_session_id_metadata_row(self, tmp_path):
+        csv_file = tmp_path / "p19_train_resman_260901_082426.csv"
+        csv_file.write_text(
+            "logtime,scenario_time,type,module,address,value\n"
+            "1.0,0,session_id,,,6\n"
+        )
+        assert get_session_id_from_csv(Path(csv_file)) == 6
+
+
 class TestGetSessionNumbers:
     @patch("core.utils.P")
     def test_returns_session_ids(self, mock_paths):
-        """Parses session IDs from CSV filenames."""
-        mock_file1 = MagicMock()
-        mock_file1.name = "1_240101_120000.csv"
-        mock_file2 = MagicMock()
-        mock_file2.name = "3_240102_130000.csv"
-        mock_paths.__getitem__ = lambda self, k: MagicMock(glob=MagicMock(return_value=[mock_file1, mock_file2]))
-        result = get_session_numbers()
+        """Parses session IDs from CSV metadata when filenames do not include them."""
+        mock_file1 = Path("/tmp/p19_train_resman_240101_120000.csv")
+        mock_file2 = Path("/tmp/p20_track_240102_130000.csv")
+        with patch("core.utils.get_session_id_from_csv", side_effect=[1, 3]):
+            mock_paths.__getitem__ = lambda self, k: MagicMock(glob=MagicMock(return_value=[mock_file1, mock_file2]))
+            result = get_session_numbers()
         assert result == [1, 3]
 
     @patch("core.utils.P")
     def test_empty_dir_returns_zero(self, mock_paths):
-        """Empty sessions directory returns [0]."""
-        mock_paths.__getitem__ = lambda self, k: MagicMock(glob=MagicMock(side_effect=ValueError))
+        """Empty/unreadable sessions directory returns [0]."""
+        mock_paths.__getitem__ = lambda self, k: MagicMock(glob=MagicMock(side_effect=OSError))
         result = get_session_numbers()
         assert result == [0]
+
+    @patch("core.utils.P")
+    def test_ignores_files_without_parseable_session_id(self, mock_paths):
+        mock_file1 = Path("/tmp/p19_train_resman_240101_120000.csv")
+        mock_file2 = Path("/tmp/p20_track_240102_130000.csv")
+        with patch("core.utils.get_session_id_from_csv", side_effect=[None, 3]):
+            mock_paths.__getitem__ = lambda self, k: MagicMock(glob=MagicMock(return_value=[mock_file1, mock_file2]))
+            result = get_session_numbers()
+        assert result == [3]
 
 
 class TestFindFirstAvailableSessionNumber:

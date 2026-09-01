@@ -6,15 +6,27 @@ from __future__ import annotations
 
 from collections import namedtuple
 from csv import DictWriter
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
-from time import perf_counter
 from typing import IO, Any
 
 from core.constants import PATHS, REPLAY_MODE
 from core.utils import find_the_first_available_session_number
 
 _logger: Logger | None = None
+
+
+def _now_logtime() -> float:
+    return datetime.now(timezone.utc).timestamp()
+
+
+def _sanitize_filename_part(value: str | None, default: str = "unknown") -> str:
+    if value is None:
+        return default
+
+    sanitized: str = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in value.strip())
+    sanitized = sanitized.strip("_")
+    return sanitized or default
 
 
 def get_logger() -> Logger:
@@ -30,7 +42,7 @@ def set_logger(lg: Logger | None) -> None:
 
 
 class Logger:
-    def __init__(self) -> None:
+    def __init__(self, participant_id: str | None = None, scenario_path: Path | None = None) -> None:
         self.datetime: datetime = datetime.now()
         self.fields_list: list[str] = ["logtime", "scenario_time", "type", "module", "address", "value"]
         self.slot: type = namedtuple("Row", self.fields_list)
@@ -42,6 +54,8 @@ class Logger:
         self.mode: str = "w"
 
         self.scenario_time: float = 0  # Updated by the scheduler class
+        self.participant_id: str = _sanitize_filename_part(participant_id, default="participant_unknown")
+        self.scenario_name: str = _sanitize_filename_part(scenario_path.stem if scenario_path is not None else None)
 
         self.file: IO[str] | None = None
         self.writer: DictWriter | None = None
@@ -49,10 +63,12 @@ class Logger:
 
         if not REPLAY_MODE:
             self.path: Path = PATHS["SESSIONS"].joinpath(
-                self.datetime.strftime("%Y-%m-%d"), f"{self.session_id}_{self.datetime.strftime('%y%m%d_%H%M%S')}.csv"
+                self.datetime.strftime("%Y-%m-%d"),
+                f"{self.participant_id}_{self.scenario_name}_{self.datetime.strftime('%y%m%d_%H%M%S')}.csv",
             )
             self.path.parent.mkdir(parents=True, exist_ok=True)
             self.open()
+            self.log_manual_entry(str(self.session_id), key="session_id")
 
     # TODO: see if we can/should merge record_* methods into one
     def record_event(self, event: Any) -> None:
@@ -62,42 +78,42 @@ class Logger:
         elif len(event.command) == 2:
             adress = event.command[0]
             value = event.command[1]
-        slot: list[Any] = [perf_counter(), self.scenario_time, "event", event.plugin, adress, value]
+        slot: list[Any] = [_now_logtime(), self.scenario_time, "event", event.plugin, adress, value]
         self.write_single_slot(slot)
 
     def record_input(self, module: str, key: str, state: str) -> None:
-        slot: list[Any] = [perf_counter(), self.scenario_time, "input", module, key, state]
+        slot: list[Any] = [_now_logtime(), self.scenario_time, "input", module, key, state]
         self.write_single_slot(slot)
 
     def record_aoi(self, container: Any, name: str) -> None:
         plugin: str = name.split("_")[0]
         widget: str = "_".join(name.split("_")[1:])
-        slot: list[Any] = [perf_counter(), self.scenario_time, "aoi", plugin, widget, container.get_x1y1x2y2()]
+        slot: list[Any] = [_now_logtime(), self.scenario_time, "aoi", plugin, widget, container.get_x1y1x2y2()]
         self.write_single_slot(slot)
 
     def record_state(self, graph_name: str, attribute: str, value: Any) -> None:
         module: str = graph_name.split("_")[0]
         graph_name = "_".join(graph_name.split("_")[1:])
         address: str = f"{graph_name}, {attribute}"
-        slot: list[Any] = [perf_counter(), self.scenario_time, "state", module, address, value]
+        slot: list[Any] = [_now_logtime(), self.scenario_time, "state", module, address, value]
         self.write_single_slot(slot)
 
     def record_parameter(self, plugin: str, address: str, value: Any) -> None:
-        slot: list[Any] = [perf_counter(), self.scenario_time, "parameter", plugin, address, value]
+        slot: list[Any] = [_now_logtime(), self.scenario_time, "parameter", plugin, address, value]
         self.write_single_slot(slot)
 
     def log_performance(self, module: str, metric: str, value: Any) -> None:
-        slot: list[Any] = [perf_counter(), self.scenario_time, "performance", module, metric, value]
+        slot: list[Any] = [_now_logtime(), self.scenario_time, "performance", module, metric, value]
         self.write_single_slot(slot)
 
     def record_a_pseudorandom_value(self, module: str, seed: int, output: Any) -> None:
-        slot: list[Any] = [perf_counter(), self.scenario_time, "seed_value", module, "", seed]
+        slot: list[Any] = [_now_logtime(), self.scenario_time, "seed_value", module, "", seed]
         self.write_single_slot(slot)
-        slot = [perf_counter(), self.scenario_time, "seed_output", module, "", output]
+        slot = [_now_logtime(), self.scenario_time, "seed_output", module, "", output]
         self.write_single_slot(slot)
 
     def log_manual_entry(self, entry: str, key: str = "manual") -> None:
-        slot: list[Any] = [perf_counter(), self.scenario_time, key, "", "", entry]
+        slot: list[Any] = [_now_logtime(), self.scenario_time, key, "", "", entry]
         self.write_single_slot(slot)
 
     def __enter__(self) -> Logger:

@@ -12,6 +12,7 @@ from typing import Any
 from core.constants import PATHS as P
 from core.error import get_errors
 from core.event import Event
+from core.utils import get_session_id_from_csv, get_session_id_from_filename
 
 # Some plugins must not be replayed for now
 IGNORE_PLUGINS: list[str] = ["labstreaminglayer", "parallelport"]
@@ -35,13 +36,16 @@ class LogReader:
         if session_path is not None:
             # Direct path provided (from file selector)
             self.session_file_path = Path(session_path)
-            try:
-                self.replay_session_id = int(self.session_file_path.stem.split("_")[0])
-            except (ValueError, IndexError):
-                pass
+            self.replay_session_id = get_session_id_from_filename(self.session_file_path.name) or get_session_id_from_csv(
+                self.session_file_path
+            )
         else:
             # Look up by session ID
-            session_file_list: list[Path] = [f for f in P["SESSIONS"].glob(f"**/{replay_session_id}_*.csv")]
+            session_file_list: list[Path] = [
+                f
+                for f in P["SESSIONS"].glob("**/*.csv")
+                if (get_session_id_from_filename(f.name) or get_session_id_from_csv(f)) == replay_session_id
+            ]
 
             if len(session_file_list) == 0:
                 msg = _("The desired session file (ID=%s) does not exist") % replay_session_id

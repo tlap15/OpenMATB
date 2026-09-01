@@ -1,7 +1,9 @@
 # Copyright 2023-2026, by Julien Cegarra & Benoît Valéry. All rights reserved.
 # Institut National Universitaire Champollion (Albi, France).
 # License : CeCILL, version 2.1 (see the LICENSE file)
+import csv
 import sys
+from pathlib import Path
 from typing import Any, Optional
 
 from pyglet import font
@@ -18,13 +20,47 @@ def clamp(x: float, val_min: float, val_max: float) -> float:
     return x
 
 
+def get_session_id_from_filename(filename: str) -> int | None:
+    parts: list[str] = Path(filename).stem.split("_")
+
+    if len(parts) > 0 and parts[0].isdigit():
+        return int(parts[0])
+
+    for part in parts:
+        if part.startswith("sid") and part[3:].isdigit():
+            return int(part[3:])
+
+    return None
+
+
+def get_session_id_from_csv(path: Path) -> int | None:
+    try:
+        with open(path, newline="") as csvfile:
+            reader: csv.DictReader = csv.DictReader(csvfile)
+            for row in reader:
+                if row.get("type") == "session_id":
+                    value: str | None = row.get("value")
+                    if value is not None and value.isdigit():
+                        return int(value)
+                    return None
+    except (OSError, csv.Error):
+        return None
+
+    return None
+
+
 def get_session_numbers() -> list[int]:
     try:
-        session_numbers = [int(s.name.split("_")[0]) for s in P["SESSIONS"].glob("**/*.csv")]
-    except (ValueError, IndexError):
+        session_numbers = [
+            session_id
+            for s in P["SESSIONS"].glob("**/*.csv")
+            for session_id in [get_session_id_from_filename(s.name) or get_session_id_from_csv(s)]
+            if session_id is not None
+        ]
+    except OSError:
         session_numbers = [0]
 
-    return session_numbers
+    return session_numbers if len(session_numbers) > 0 else [0]
 
 
 def find_the_first_available_session_number() -> int:

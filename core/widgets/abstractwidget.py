@@ -20,6 +20,18 @@ from pyglet.gl import (  # noqa: F401
 )
 from pyglet.text import HTMLLabel, Label
 
+
+def set_line_width_safely(width: float) -> None:
+    """Set OpenGL line width, falling back to 1 when wider lines are unsupported."""
+    try:
+        glLineWidth(width)
+    except Exception:
+        if width != 1:
+            try:
+                glLineWidth(1)
+            except Exception:
+                pass
+
 from core.constants import BFLIM
 from core.constants import COLORS as C
 from core.constants import FONT_SIZES as F  # noqa: F401
@@ -48,7 +60,7 @@ class AbstractWidget:
         self.visible: bool = False
         self.logger: Logger = get_logger()
         self.highlight_aoi: str = get_conf_value("Openmatb", "highlight_aoi")
-        glLineWidth(2)
+        set_line_width_safely(2)
 
         self.m_draw: int = 0
         self.verbose: bool = False

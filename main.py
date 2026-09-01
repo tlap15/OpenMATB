@@ -25,14 +25,32 @@ language.install()
 
 # Only after language installation, import core modules (they must be translated)
 from core import ReplayScheduler, Scheduler
+from core.logger import Logger, set_logger
 from core.constants import PATHS, REPLAY_MODE
 from core.selector import FileSelector
 from core.utils import get_conf_value
 from core.window import Window
 
 
+def _prompt_participant_number() -> str:
+    while True:
+        try:
+            participant_number: str = input("Participant number: ").strip()
+        except EOFError:
+            return "participant_unknown"
+
+        if participant_number:
+            return participant_number
+
+        print("Please enter a participant number.")
+
+
 class OpenMATB:
     def __init__(self) -> None:
+        participant_number: str | None = None
+        if not REPLAY_MODE:
+            participant_number = _prompt_participant_number()
+
         # The MATB window must be borderless (for non-fullscreen mode)
         Window(style=Window.WINDOW_STYLE_DIALOG, resizable=True)
 
@@ -54,6 +72,8 @@ class OpenMATB:
                 selected = FileSelector(Window.MainWindow, "scenario").run()
                 if selected is None:
                     sys.exit(0)
+
+            set_logger(Logger(participant_id=participant_number, scenario_path=selected))
             Scheduler(scenario_path=selected)
 
 

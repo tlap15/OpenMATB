@@ -1,14 +1,32 @@
 """Tests for widget math functions - geometry without rendering."""
 
 import math
+from unittest.mock import call, patch
 
-from core.widgets.abstractwidget import AbstractWidget
+from core.widgets.abstractwidget import AbstractWidget, set_line_width_safely
 
 
 def _make_bare_widget():
     """Create an AbstractWidget bypassing __init__ to avoid GUI dependencies."""
     w = object.__new__(AbstractWidget)
     return w
+
+
+class TestSetLineWidthSafely:
+    def test_uses_requested_width_when_supported(self):
+        with patch("core.widgets.abstractwidget.glLineWidth") as mock_line_width:
+            set_line_width_safely(2)
+            mock_line_width.assert_called_once_with(2)
+
+    def test_falls_back_to_one_when_requested_width_fails(self):
+        with patch("core.widgets.abstractwidget.glLineWidth", side_effect=[Exception("unsupported"), None]) as mock_line_width:
+            set_line_width_safely(2)
+            assert mock_line_width.call_args_list == [call(2), call(1)]
+
+    def test_swallows_failure_when_fallback_also_fails(self):
+        with patch("core.widgets.abstractwidget.glLineWidth", side_effect=[Exception("unsupported"), Exception("fallback failed")]) as mock_line_width:
+            set_line_width_safely(2)
+            assert mock_line_width.call_args_list == [call(2), call(1)]
 
 
 class TestVerticeStrip:

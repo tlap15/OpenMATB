@@ -1,7 +1,7 @@
-<h1>Présentation des tâches</h1>
+<h1>Task overview</h1>
 
-<p>En haut à droite de l'écran, le participant dispose d'un planificateur, qui lui indique pour chaque tâche (symbolisée par une lettre capitale et une ligne de temps), les phases durant lesquelles elle sera active.</p>
+<p>At the top right of the screen, the participant has a scheduler that shows, for each task (represented by a capital letter and a timeline), the phases during which it will be active.</p>
 
-<p>Il existe aussi un système d'automation, capable de partager la charge de travail avec le participant. Lorsque l'automation est active pour une tâche donnée, le planificateur le symbolise.</p>
+<p>There is also an automation system that can share the workload with the participant. When automation is active for a given task, the scheduler indicates it.</p>
 
-<p>Ceci aide le participant à gérer son effort et l'allocation de ses ressources.</p>
+<p>This helps the participant manage effort and allocate resources efficiently.</p>

@@ -49,6 +49,23 @@ You can now launch OpenMATB by executing the `main.py` file with python 3.9.
 python main.py
 ```
 
+### Recommended launcher for data collection
+
+If you are running experiment sessions and want new session files to be copied into the separate `openmatb-data` Git repository automatically, use the launcher instead of running `main.py` directly:
+
+- **macOS**: double-click `Run OpenMATB.command`
+- **Windows**: double-click `Run OpenMATB.bat`
+- **Terminal (any platform)**: `python launcher.py`
+
+The launcher will:
+1. update the app repository,
+2. run OpenMATB,
+3. detect new session `.csv` files,
+4. copy them into `openmatb-data/data/<YYYY-MM-DD>/`,
+5. commit and push that data repository.
+
+If the push fails, the run is still saved locally and can be retried later.
+
 ### Virtual environment
 
 If you want to create a dedicated python installation (so various python projects won’t overlap), you might want to install a virtual environment in your local repository. To do so, follow the instructions detailed on this [related page](https://docs.python.org/3.9/tutorial/venv.html).

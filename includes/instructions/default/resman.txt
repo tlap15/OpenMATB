@@ -1,7 +1,7 @@
-<h1>Présentation des tâches</h1>
+<h1>Task overview</h1>
 
-<p>Dans la tâche de gestion des ressources, les participants doivent limiter la fuite des deux réservoirs principaux (A et B) en utilisant un jeu de réservoirs de secours et de pompes, dont chacune a une puissance particulière.</p>
+<p>In the resource management task, participants must limit leakage from the two main tanks (A and B) by using a set of backup tanks and pumps, each with its own specific power.</p>
 
-<p>La tâche du participant est d'allumer/éteindre les pompes numérotées pour faire se rapprocher, du mieux que possible, les réservoirs A et B de leurs niveaux normaux.</p>
+<p>The participant's task is to turn the numbered pumps on and off so that tanks A and B stay as close as possible to their normal levels.</p>
 
-<p>Des pompes peuvent parfois tomber en panne.</p>
+<p>Pumps may occasionally fail.</p>
