@@ -45,14 +45,23 @@ def _prompt_participant_number() -> str:
         print("Please enter a participant number.")
 
 
+def _get_window_kwargs() -> dict[str, object]:
+    kwargs: dict[str, object] = {"resizable": True}
+    dialog_style = getattr(Window, "WINDOW_STYLE_DIALOG", None)
+    if sys.platform == "darwin" and dialog_style is not None:
+        kwargs["style"] = dialog_style
+    return kwargs
+
+
 class OpenMATB:
     def __init__(self) -> None:
         participant_number: str | None = None
         if not REPLAY_MODE:
             participant_number = _prompt_participant_number()
 
-        # The MATB window must be borderless (for non-fullscreen mode)
-        Window(style=Window.WINDOW_STYLE_DIALOG, resizable=True)
+        # On macOS, keep the dialog-style window. On Windows/Linux, prefer the default
+        # window style to avoid platform-specific redraw flicker.
+        Window(**_get_window_kwargs())
 
         if REPLAY_MODE:
             # Skip the selector when a replay session ID is given via command line

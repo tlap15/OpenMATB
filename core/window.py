@@ -46,7 +46,8 @@ class Window(Window):
         self.set_icon(logo16, logo32)
 
         self.set_size_and_location(screen)  # Postpone multiple monitor support
-        self.set_mouse_visible(REPLAY_MODE)
+        self._mouse_visible_state: bool = REPLAY_MODE
+        self.set_mouse_visible(self._mouse_visible_state)
 
         self.batch: Batch = Batch()
         self.keyboard: dict[str, bool] = dict()  # Reproduce a simple KeyStateHandler
@@ -152,10 +153,16 @@ class Window(Window):
         )
 
     def on_draw(self) -> None:
-        self.set_mouse_visible(self.is_mouse_necessary())
+        self.update_mouse_visibility()
         glClearColor(0, 0, 0, 1)
         self.clear()
         self.batch.draw()
+
+    def update_mouse_visibility(self) -> None:
+        mouse_visible: bool = self.is_mouse_necessary()
+        if mouse_visible != self._mouse_visible_state:
+            self.set_mouse_visible(mouse_visible)
+            self._mouse_visible_state = mouse_visible
 
     def is_mouse_necessary(self) -> bool:
         return self.slider_visible or REPLAY_MODE

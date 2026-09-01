@@ -20,6 +20,8 @@ def _make_window(**overrides):
     w.alive = True
     w.slider_visible = False
     w.on_key_press_replay = None
+    w._mouse_visible_state = False
+    w.set_mouse_visible = MagicMock()
     w.__dict__.update(overrides)
     return w
 
@@ -170,6 +172,21 @@ class TestGetContainer:
         w = _make_window()
         c = w.get_container("nonexistent")
         assert c is None
+
+
+class TestUpdateMouseVisibility:
+    @patch("core.window.REPLAY_MODE", False)
+    def test_updates_only_when_state_changes(self):
+        w = _make_window(slider_visible=True, _mouse_visible_state=False)
+        w.update_mouse_visibility()
+        w.set_mouse_visible.assert_called_once_with(True)
+        assert w._mouse_visible_state is True
+
+    @patch("core.window.REPLAY_MODE", False)
+    def test_skips_update_when_state_is_unchanged(self):
+        w = _make_window(slider_visible=False, _mouse_visible_state=False)
+        w.update_mouse_visibility()
+        w.set_mouse_visible.assert_not_called()
 
 
 class TestIsMouseNecessary:
