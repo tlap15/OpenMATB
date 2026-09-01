@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import sys
@@ -21,11 +22,35 @@ def sanitize_path_part(value: str, default: str = "unknown") -> str:
 
 
 def get_python_executable(app_repo: Path = APP_REPO) -> str:
+    user_home = Path.home()
+    conda_prefix = os.environ.get("CONDA_PREFIX")
+
     candidates: list[Path] = [
         app_repo / ".venv" / "Scripts" / "python.exe",
         app_repo / ".venv" / "bin" / "python3",
         app_repo / ".venv" / "bin" / "python",
     ]
+
+    if conda_prefix:
+        candidates.extend(
+            [
+                Path(conda_prefix) / "python.exe",
+                Path(conda_prefix) / "bin" / "python3",
+                Path(conda_prefix) / "bin" / "python",
+            ]
+        )
+
+    candidates.extend(
+        [
+            user_home / "anaconda3" / "python.exe",
+            user_home / "miniconda3" / "python.exe",
+            user_home / "Anaconda3" / "python.exe",
+            user_home / "Miniconda3" / "python.exe",
+            Path("/opt/anaconda3/bin/python3"),
+            Path("/opt/miniconda3/bin/python3"),
+        ]
+    )
+
     for candidate in candidates:
         if candidate.exists():
             return str(candidate)

@@ -30,6 +30,13 @@ class TestGetPythonExecutable:
         venv_python.write_text("")
         assert get_python_executable(tmp_path) == str(venv_python)
 
+    def test_uses_conda_prefix_when_available(self, tmp_path, monkeypatch):
+        conda_python = tmp_path / "conda" / "python.exe"
+        conda_python.parent.mkdir(parents=True)
+        conda_python.write_text("")
+        monkeypatch.setenv("CONDA_PREFIX", str(conda_python.parent))
+        assert get_python_executable(tmp_path / "app") == str(conda_python)
+
 
 class TestDiffNewFiles:
     def test_returns_sorted_new_files(self, tmp_path):
