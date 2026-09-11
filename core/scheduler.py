@@ -25,13 +25,16 @@ class Scheduler:
     This class manages events execution.
     """
 
-    def __init__(self, scenario_path: Path | None = None) -> None:
+    def __init__(self, scenario_path: Path | None = None, scenario_paths: list[Path] | None = None) -> None:
         with open("VERSION", "r") as f:
             get_logger().log_manual_entry(f.read().strip(), key="version")
 
         self.clock: Clock = Clock("main")
         self.scenario_time: float = 0
-        self.scenario_path: Path | None = scenario_path
+        self.scenario_paths: list[Path] = scenario_paths or ([scenario_path] if scenario_path is not None else [])
+        self.scenario_index: int = 0
+        self.scenario_path: Path | None = self.scenario_paths[0] if self.scenario_paths else None
+        self._pushed_plugin_handlers: list[tuple[Any, Any]] = []
 
         # Create the event loop
         self.clock.schedule(self.update)
@@ -44,6 +47,8 @@ class Scheduler:
         self.event_loop.run()
 
     def set_scenario(self, events: list[str] | None = None) -> None:
+        self._clear_plugin_handlers()
+
         scenario_path: Path | None = self.scenario_path if events is None else None
         self.scenario: Scenario = Scenario(events, scenario_path=scenario_path)
 
@@ -56,6 +61,7 @@ class Scheduler:
             self.plugins[p].joystick = self.joystick
             if not REPLAY_MODE:
                 Window.MainWindow.push_handlers(self.plugins[p].on_key_press, self.plugins[p].on_key_release)
+                self._pushed_plugin_handlers.append((self.plugins[p].on_key_press, self.plugins[p].on_key_release))
 
             self.plugins[p].on_scenario_loaded(self.scenario)
 
@@ -266,7 +272,41 @@ class Scheduler:
         return None
 
     def exit(self) -> None:
+        if self._load_next_scenario():
+            return
+
+        self._clear_plugin_handlers()
         get_logger().log_manual_entry("end")
         self.event_loop.exit()
         Window.MainWindow.close()  # needed for windows clean exit
         sys.exit(0)
+
+    def _load_next_scenario(self) -> bool:
+        next_index: int = self.scenario_index + 1
+        if next_index >= len(self.scenario_paths):
+            return False
+
+        for _name, plugin in self.plugins.items():
+            if plugin.alive:
+                plugin.stop()
+            self._empty_plugin_widgets(plugin)
+
+        self.scenario_index = next_index
+        self.scenario_path = self.scenario_paths[self.scenario_index]
+        Window.MainWindow.alive = True
+        Window.MainWindow.keyboard.clear()
+        if Window.MainWindow.modal_dialog is not None:
+            Window.MainWindow.modal_dialog.on_delete()
+        get_logger().log_manual_entry(str(self.scenario_path), key="scenario_path")
+        self.set_scenario()
+        Window.MainWindow.display_session_id()
+        return True
+
+    def _clear_plugin_handlers(self) -> None:
+        while self._pushed_plugin_handlers:
+            on_key_press, on_key_release = self._pushed_plugin_handlers.pop()
+            Window.MainWindow.remove_handlers(on_key_press, on_key_release)
+
+    def _empty_plugin_widgets(self, plugin: Any) -> None:
+        for _name, widget in plugin.widgets.items():
+            widget.empty_batch()

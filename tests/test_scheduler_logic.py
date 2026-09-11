@@ -142,3 +142,33 @@ class TestActivePluginHelpers:
         result = sched.get_active_non_blocking_plugins()
         assert p2 in result
         assert p1 not in result
+
+
+class TestScenarioSequence:
+    def test_load_next_scenario_stops_and_clears_previous_widgets(self, mock_window, monkeypatch):
+        """Scenario handoff removes old foreground masks from the render batch."""
+        import core.scheduler
+        from core.scheduler import Scheduler
+
+        mock_log = MagicMock()
+        monkeypatch.setattr(core.scheduler, "get_logger", lambda: mock_log)
+
+        sched = object.__new__(Scheduler)
+        sched.scenario_paths = ["first.txt", "second.txt"]
+        sched.scenario_index = 0
+        sched._pushed_plugin_handlers = []
+        sched.set_scenario = MagicMock()
+
+        widget = MagicMock()
+        plugin = MagicMock(alive=True, widgets={"foreground": widget})
+        sched.plugins = {"track": plugin}
+
+        assert sched._load_next_scenario() is True
+
+        plugin.stop.assert_called_once()
+        widget.empty_batch.assert_called_once()
+        assert sched.scenario_index == 1
+        assert sched.scenario_path == "second.txt"
+        assert mock_window.alive is True
+        mock_window.keyboard.clear.assert_called_once()
+        sched.set_scenario.assert_called_once()
