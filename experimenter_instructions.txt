@@ -1,0 +1,108 @@
+OpenMATB Eye Tracking Experiment Instructions
+
+**1. Log in to the experiment computer.**
+
+Username: L-DJ4YJ34-KING\GCBM_MATB
+Password: DKH2072C-Lapnas
+
+Both the username and password are case sensitive.
+
+**2. Set up the equipment before the participant begins.**
+
+Plug in the ethernet cable.
+Make sure the Tobii eye tracker is plugged in and positioned correctly.
+Plug in the joystick.
+Plug in the additional keyboard.
+
+**3. Give the participant the consent form and demographic form.**
+
+While the participant is filling out the forms, check the Excel file for the participant ID. This participant ID will be used for the entire run.
+
+Write the participant ID on the demographic form. Do not write it on the consent form because the consent form already has the participant's name on it.
+
+Fill out the required information in the Excel document.
+
+**4. Seat the participant.**
+
+Seat the participant in front of the computer in a comfortable position. They will be there for a while and cannot move much during the experiment because the Tobii eye tracker needs a stable head and eye position to track correctly.
+
+Tell the participant to keep their head still and move only their eyes when looking around the screen.
+
+Make sure the participant understands that they should return to this same position after each training period and each break.
+
+**5. Start OpenMATB.**
+
+Open the "RUN OPEN MATB" shortcut in the middle of the desktop.
+
+When prompted, enter the participant number. Include a P before the number. The P is not case sensitive, so either P100 or p100 is acceptable. For example:
+
+P100
+
+Before pressing Enter, make sure the participant is set up, comfortable, and ready to look at the screen. After you press Enter, the eye tracker calibration will begin.
+
+**6. Calibrate and validate the eye tracker.**
+
+During calibration, the participant should look directly at each dot as it appears on the screen.
+
+Remind the participant to keep their head still and move only their eyes during calibration and validation.
+
+Immediately after calibration, the program will run validation. The participant should again look directly at each dot.
+
+After validation, review the validation plot:
+
+- Green circles show the target locations.
+- Red X marks show the recorded eye fixations.
+- Blue lines show the error between the target and the recorded fixation.
+
+If validation is successful, press "Accept Validation".
+
+If validation is not successful, press "Restart Full Process". The program will repeat calibration and validation until validation is acceptable.
+
+**7. Explain the training tasks to the participant.**
+
+Tell the participant they will begin with training. Training is done one task at a time. Each training task lasts about 5 minutes, except the system monitoring training file currently lasts 3 minutes.
+
+The first training task is the joystick tracking task.
+
+In this task, the participant uses the joystick to keep the moving cursor inside the target area.
+
+The second training task is the system monitoring task.
+
+In this task, the participant watches two boxes at the top and four rectangles underneath them. The top left box should be green, and the top right box should be red. The arrows bouncing up and down inside the four rectangles should stay in the middle. If an arrow stays near the top or bottom of its rectangle, the participant should press the corresponding key to reset it.
+
+The third training task is the resource management task.
+
+In this task, the participant manages fuel or resource levels across tanks using pumps. The black boxes on the sides of the two main tanks show the target levels. Tanks A and B lose resources over time, and the participant should operate the pumps to keep the tank levels near those target boxes.
+
+**8. Run the main task blocks.**
+
+After the participant completes training, they will move on to 3 main blocks.
+
+Each block contains all 3 tasks at the same time:
+
+- Joystick tracking
+- System monitoring
+- Resource management
+
+Each block lasts 20 minutes.
+
+Give the participant about a 5-minute break between blocks as needed. They may use the bathroom during breaks if needed.
+
+Before each block begins, make sure the participant returns to the original seated position so the eye tracker can track correctly.
+
+**9. If the participant needs to pause or stop.**
+
+Press the Escape key if the participant needs to stop or pause the task.
+
+When the prompt appears:
+
+- Press Q to quit.
+- Press Space to continue.
+
+**10. Finish the session.**
+
+When all blocks are completed, the data will save automatically.
+
+Thank the participant for their time and ask if they have any questions.
+
+Slide the consent form and demographic form under Dr. Matt Peterson's door.
