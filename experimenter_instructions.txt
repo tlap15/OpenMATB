@@ -34,15 +34,15 @@ Make sure the participant understands that they should return to this same posit
 
 Open the "RUN OPEN MATB" shortcut in the middle of the desktop.
 
-When prompted, enter the participant number. Include a P before the number. The P is not case sensitive, so either P100 or p100 is acceptable. For example:
+Enter the participant number with a P. For example:
 
 P100
 
-Explain to the participant that calibration will begin after Enter is pressed. During calibration, they should keep their head still and follow the dot with their eyes.
-
-Before pressing Enter, make sure the participant is set up, comfortable, and ready to look at the screen. After you press Enter, the eye tracker calibration will begin.
+Read step 6 before pressing Enter.
 
 **6. Calibrate and validate the eye tracker.**
+
+Explain to the participant that calibration will begin after Enter is pressed. During calibration, they should keep their head still and follow the dot with their eyes.
 
 During calibration, the participant should look directly at each dot as it appears on the screen.
 
