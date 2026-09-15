@@ -62,7 +62,7 @@ If validation is not successful, press "Restart Full Process". The program will 
 
 **7. Explain the training tasks to the participant.**
 
-Tell the participant they will begin with training. Training is done one task at a time. Each training task lasts about 5 minutes, except the system monitoring training file currently lasts 3 minutes.
+Tell the participant they will begin with training. Training is done one task at a time. The system monitoring training lasts about 3 minutes, and the joystick tracking and resource management trainings last about 5 minutes each.
 
 The first training task is the joystick tracking task.
 
@@ -70,7 +70,7 @@ In this task, the participant uses the joystick to keep the moving cursor inside
 
 The second training task is the system monitoring task.
 
-In this task, the participant watches two boxes at the top and four rectangles underneath them. The top left box should be green, and the top right box should be red. The arrows bouncing up and down inside the four rectangles should stay in the middle. If an arrow stays near the top or bottom of its rectangle, the participant should press the corresponding key to reset it.
+In this task, the participant watches two boxes at the top and four rectangles underneath them. The top left box should be green, and the top right box should not be red. If the top right box turns red, the participant should press the corresponding key to reset it. The arrows bouncing up and down inside the four rectangles should stay in the middle. If an arrow stays near the top or bottom of its rectangle, the participant should press the corresponding key to reset it.
 
 The third training task is the resource management task.
 
