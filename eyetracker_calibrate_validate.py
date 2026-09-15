@@ -319,22 +319,35 @@ def run_calibration_validation(my_eyetracker=None) -> object:
     if my_eyetracker is None:
         my_eyetracker = find_eyetracker()
 
-    display = CalibrationDisplay(dot_size=30)
-    display.create_window()
-
     calibration_approved = False
 
     while not calibration_approved:
-        if display.root is None:
+        display = CalibrationDisplay(dot_size=30)
+        try:
             display.create_window()
+            calibration_approved = _run_calibration_validation_attempt(my_eyetracker, display)
+        except Exception as exc:
+            print(f"\n[ERROR] Calibration/validation attempt failed: {exc}")
+            print("Restarting calibration and validation...")
+            calibration_approved = False
+        finally:
+            try:
+                display.close()
+            except tk.TclError:
+                pass
 
-        print("\n" + "="*50)
-        print("STARTING 9-POINT CALIBRATION")
-        print("="*50)
+    return my_eyetracker
 
-        calibration = tr.ScreenBasedCalibration(my_eyetracker)
-        calibration.enter_calibration_mode()
 
+def _run_calibration_validation_attempt(my_eyetracker, display: CalibrationDisplay) -> bool:
+    print("\n" + "="*50)
+    print("STARTING 9-POINT CALIBRATION")
+    print("="*50)
+
+    calibration = tr.ScreenBasedCalibration(my_eyetracker)
+    calibration.enter_calibration_mode()
+
+    try:
         calibration_points = [
             (0.1, 0.1), (0.5, 0.1), (0.9, 0.1),
             (0.1, 0.5), (0.5, 0.5), (0.9, 0.5),
@@ -366,116 +379,116 @@ def run_calibration_validation(my_eyetracker=None) -> object:
         else:
             print("[FAIL] Calibration failed. Some points may need recalibration.")
             display.show_message("[FAIL] Calibration Failed", duration=2.0)
-
+    finally:
         calibration.leave_calibration_mode()
 
-        if calibration_result.status != tr.CALIBRATION_STATUS_SUCCESS:
-            print("Restarting from calibration because calibration was not applied successfully.")
-            continue
+    if calibration_result.status != tr.CALIBRATION_STATUS_SUCCESS:
+        print("Restarting from calibration because calibration was not applied successfully.")
+        return False
 
-        print("\n" + "="*50)
-        print("STARTING 9-POINT VALIDATION")
-        print("="*50)
+    print("\n" + "="*50)
+    print("STARTING 9-POINT VALIDATION")
+    print("="*50)
 
-        display.show_message("Starting Validation...", duration=1.0)
-        validation_points = [
-            (0.2, 0.2), (0.5, 0.2), (0.8, 0.2),
-            (0.2, 0.5), (0.5, 0.5), (0.8, 0.5),
-            (0.2, 0.8), (0.5, 0.8), (0.8, 0.8)
-        ]
-        validation_data = []
-        validation_samples = {point: [] for point in validation_points}
-        validation_state = {"collecting": False, "point": None}
+    display.show_message("Starting Validation...", duration=1.0)
+    validation_points = [
+        (0.2, 0.2), (0.5, 0.2), (0.8, 0.2),
+        (0.2, 0.5), (0.5, 0.5), (0.8, 0.5),
+        (0.2, 0.8), (0.5, 0.8), (0.8, 0.8)
+    ]
+    validation_data = []
+    validation_samples = {point: [] for point in validation_points}
+    validation_state = {"collecting": False, "point": None}
 
-        def validation_gaze_callback(gaze_data):
-            current_point = validation_state["point"]
-            if validation_state["collecting"] and current_point is not None:
-                left_point = gaze_data.get('left_gaze_point_on_display_area')
-                right_point = gaze_data.get('right_gaze_point_on_display_area')
-                left_valid = gaze_data.get('left_gaze_point_validity', 0) == 1
-                right_valid = gaze_data.get('right_gaze_point_validity', 0) == 1
+    def validation_gaze_callback(gaze_data):
+        current_point = validation_state["point"]
+        if validation_state["collecting"] and current_point is not None:
+            left_point = gaze_data.get('left_gaze_point_on_display_area')
+            right_point = gaze_data.get('right_gaze_point_on_display_area')
+            left_valid = gaze_data.get('left_gaze_point_validity', 0) == 1
+            right_valid = gaze_data.get('right_gaze_point_validity', 0) == 1
 
-                valid_points = []
-                if left_valid and left_point and np.isfinite(left_point[0]) and np.isfinite(left_point[1]):
-                    valid_points.append(left_point)
-                if right_valid and right_point and np.isfinite(right_point[0]) and np.isfinite(right_point[1]):
-                    valid_points.append(right_point)
+            valid_points = []
+            if left_valid and left_point and np.isfinite(left_point[0]) and np.isfinite(left_point[1]):
+                valid_points.append(left_point)
+            if right_valid and right_point and np.isfinite(right_point[0]) and np.isfinite(right_point[1]):
+                valid_points.append(right_point)
 
-                if valid_points:
-                    avg_x = np.mean([point[0] for point in valid_points])
-                    avg_y = np.mean([point[1] for point in valid_points])
-                    validation_samples[current_point].append((avg_x, avg_y))
+            if valid_points:
+                avg_x = np.mean([point[0] for point in valid_points])
+                avg_y = np.mean([point[1] for point in valid_points])
+                validation_samples[current_point].append((avg_x, avg_y))
 
-        my_eyetracker.subscribe_to(tr.EYETRACKER_GAZE_DATA, validation_gaze_callback, as_dictionary=True)
-
-        try:
-            previous_point = None
-            for idx, point in enumerate(validation_points, 1):
-                print(f"\n[{idx}/9] Validation point ({point[0]}, {point[1]})")
-                validation_state["point"] = point
-                validation_samples[point] = []
-                display.move_dot(previous_point, point)
-                previous_point = point
-                display.show_dot(point[0], point[1], duration=TARGET_DELAY)
-                validation_state["collecting"] = True
-                time.sleep(TARGET_DURATION)
-                validation_state["collecting"] = False
-                time.sleep(INTER_POINT_DELAY)
-
-                print(f"  Collected {len(validation_samples[point])} gaze samples")
-
-                if validation_samples[point]:
-                    avg_x = np.mean([s[0] for s in validation_samples[point]])
-                    avg_y = np.mean([s[1] for s in validation_samples[point]])
-                    accuracy = np.sqrt((avg_x - point[0])**2 + (avg_y - point[1])**2)
-                    print(f"  Recorded gaze: ({avg_x:.3f}, {avg_y:.3f}), Accuracy: {accuracy:.3f}")
-                    validation_data.append({
-                        'target': point,
-                        'gaze': (avg_x, avg_y),
-                        'accuracy': accuracy
-                    })
-                else:
-                    print(f"  [FAIL] No samples collected for this point")
-        finally:
-            my_eyetracker.unsubscribe_from(tr.EYETRACKER_GAZE_DATA, validation_gaze_callback)
-
-        display.show_message("Validation complete!", duration=2.0)
-        display.close()
-
-        print("\n" + "="*50)
-        print("VALIDATION REVIEW")
-        print("="*50)
-
-        if validation_data:
-            accuracies = [item['accuracy'] for item in validation_data]
-            valid_accuracies = [acc for acc in accuracies if not np.isnan(acc)]
-
-            if valid_accuracies:
-                mean_accuracy = np.mean(valid_accuracies)
-                std_accuracy = np.std(valid_accuracies)
-                print("\nValidation Statistics:")
-                print(f"  Mean accuracy: {mean_accuracy:.4f}")
-                print(f"  Std accuracy: {std_accuracy:.4f}")
-                print(f"  Max accuracy: {np.max(valid_accuracies):.4f}")
-                print(f"  Min accuracy: {np.min(valid_accuracies):.4f}")
-
-                dialog = ValidationDiagnosticDialog(validation_data, mean_accuracy, std_accuracy)
-                calibration_approved = dialog.show()
-                if not calibration_approved:
-                    print("Validation rejected. Restarting calibration and validation...")
-            else:
-                print("\n[ERROR] No valid gaze data collected during validation!")
-                calibration_approved = False
-        else:
-            print("\n[ERROR] Validation data is empty - no points were recorded!")
-            calibration_approved = False
+    my_eyetracker.subscribe_to(tr.EYETRACKER_GAZE_DATA, validation_gaze_callback, as_dictionary=True)
 
     try:
-        display.close()
-    except tk.TclError:
-        pass
+        previous_point = None
+        for idx, point in enumerate(validation_points, 1):
+            print(f"\n[{idx}/9] Validation point ({point[0]}, {point[1]})")
+            validation_state["point"] = point
+            validation_samples[point] = []
+            display.move_dot(previous_point, point)
+            previous_point = point
+            display.show_dot(point[0], point[1], duration=TARGET_DELAY)
+            validation_state["collecting"] = True
+            time.sleep(TARGET_DURATION)
+            validation_state["collecting"] = False
+            time.sleep(INTER_POINT_DELAY)
 
-    return my_eyetracker
+            print(f"  Collected {len(validation_samples[point])} gaze samples")
+
+            if validation_samples[point]:
+                avg_x = np.mean([s[0] for s in validation_samples[point]])
+                avg_y = np.mean([s[1] for s in validation_samples[point]])
+                accuracy = np.sqrt((avg_x - point[0])**2 + (avg_y - point[1])**2)
+                print(f"  Recorded gaze: ({avg_x:.3f}, {avg_y:.3f}), Accuracy: {accuracy:.3f}")
+                validation_data.append({
+                    'target': point,
+                    'gaze': (avg_x, avg_y),
+                    'accuracy': accuracy
+                })
+            else:
+                print(f"  [FAIL] No samples collected for this point")
+    finally:
+        validation_state["collecting"] = False
+        try:
+            my_eyetracker.unsubscribe_from(tr.EYETRACKER_GAZE_DATA, validation_gaze_callback)
+        except Exception as exc:
+            print(f"Warning: could not unsubscribe validation callback cleanly: {exc}")
+
+    display.show_message("Validation complete!", duration=2.0)
+    display.close()
+
+    print("\n" + "="*50)
+    print("VALIDATION REVIEW")
+    print("="*50)
+
+    if validation_data:
+        accuracies = [item['accuracy'] for item in validation_data]
+        valid_accuracies = [acc for acc in accuracies if not np.isnan(acc)]
+
+        if valid_accuracies:
+            mean_accuracy = np.mean(valid_accuracies)
+            std_accuracy = np.std(valid_accuracies)
+            print("\nValidation Statistics:")
+            print(f"  Mean accuracy: {mean_accuracy:.4f}")
+            print(f"  Std accuracy: {std_accuracy:.4f}")
+            print(f"  Max accuracy: {np.max(valid_accuracies):.4f}")
+            print(f"  Min accuracy: {np.min(valid_accuracies):.4f}")
+
+            dialog = ValidationDiagnosticDialog(validation_data, mean_accuracy, std_accuracy)
+            approved = dialog.show()
+            if not approved:
+                print("Validation rejected. Restarting calibration and validation...")
+            return approved is True
+        else:
+            print("\n[ERROR] No valid gaze data collected during validation!")
+            print("Restarting calibration and validation...")
+            return False
+
+    print("\n[ERROR] Validation data is empty - no points were recorded!")
+    print("Restarting calibration and validation...")
+    return False
 
 
 class GazeRecorder:
